@@ -37,17 +37,19 @@ def predict():
         data = request.get_json()
         
         # 1. Preparar dados para o modelo de Regressão
-        # Certifique-se de que as chaves do JSON batem com as features do seu treino
+        # Chaves do JSON agora batem com as features do DataFrame de treino
         input_data = pd.DataFrame([{
             'temp_externa': data['temp_externa'],
             'lotacao': data['lotacao'],
             'incidencia_solar': data['incidencia_solar'],
-            'porta_aberta': data['porta_aberta']
+            'portas_abertas': data['portas_abertas']  # Correção: porta_aberta -> portas_abertas
         }])
         
         # 2. Predição de Consumo Esperado
         consumo_esperado = model_reg.predict(input_data)[0]
-        consumo_real = float(data['consumo_real'])
+        
+        # Correção: consumo_real -> consumo_kw
+        consumo_real = float(data['consumo_kw']) 
         
         # 3. Cálculo do Resíduo
         residuo_atual = consumo_real - consumo_esperado
