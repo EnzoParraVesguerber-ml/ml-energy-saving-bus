@@ -2,6 +2,7 @@
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
+*/ipynb_checkpoints/
 
 # Ambientes virtuais (caso você use no futuro)
 venv/
