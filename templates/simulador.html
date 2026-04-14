@@ -6,209 +6,7 @@
     <title>Smart Bus - Playground da IA</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     
-    <style>
-        :root {
-            --primary-cyan: #00f2fe;
-            --primary-blue: #4facfe;
-            --alert-red: #ff0844;
-            --alert-orange: #ffb199;
-            --success-green: #00f260;
-            --text-main: #ffffff;
-            --text-muted: #a0aabf;
-            --glass-bg: rgba(255, 255, 255, 0.05);
-            --glass-border: rgba(255, 255, 255, 0.1);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Poppins', sans-serif;
-        }
-
-        body {
-            /* Fundo com gradiente animado sutil */
-            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-            color: var(--text-main);
-            min-height: 100vh;
-            padding: 40px 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        header {
-            text-align: center;
-            margin-bottom: 50px;
-            max-width: 800px;
-        }
-
-        header h1 {
-            font-size: 32px;
-            font-weight: 700;
-            background: -webkit-linear-gradient(var(--primary-cyan), var(--primary-blue));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 10px;
-            letter-spacing: 1px;
-        }
-
-        header p {
-            color: var(--text-muted);
-            font-size: 15px;
-            font-weight: 300;
-        }
-
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 30px;
-            width: 100%;
-            max-width: 1000px;
-        }
-
-        /* Aplicação do Glassmorphism nos Cards */
-        .card {
-            background: var(--glass-bg);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--glass-border);
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-            position: relative;
-            overflow: hidden;
-            transition: transform 0.3s ease;
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
-        }
-
-        /* Detalhe de cor no topo de cada card */
-        .card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 4px;
-        }
-
-        .card.hvac::before {
-            background: linear-gradient(90deg, var(--primary-cyan), var(--primary-blue));
-        }
-
-        .card.maintenance::before {
-            background: linear-gradient(90deg, var(--alert-orange), var(--alert-red));
-        }
-
-        .card h2 {
-            font-size: 20px;
-            margin-bottom: 25px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-weight: 600;
-        }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 25px;
-        }
-
-        .input-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .input-group label {
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .input-group input, .input-group select {
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid var(--glass-border);
-            color: var(--text-main);
-            padding: 12px;
-            border-radius: 10px;
-            font-size: 14px;
-            outline: none;
-            transition: all 0.3s ease;
-        }
-
-        .input-group input:focus, .input-group select:focus {
-            border-color: var(--primary-cyan);
-            box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
-            background: rgba(0, 0, 0, 0.4);
-        }
-
-        button {
-            width: 100%;
-            padding: 15px;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
-            color: white;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .btn-blue {
-            background: linear-gradient(45deg, var(--primary-blue), var(--primary-cyan));
-            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
-        }
-
-        .btn-blue:hover {
-            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.6);
-            transform: scale(1.02);
-        }
-
-        .btn-red {
-            background: linear-gradient(45deg, var(--alert-red), var(--alert-orange));
-            box-shadow: 0 4px 15px rgba(255, 8, 68, 0.4);
-        }
-
-        .btn-red:hover {
-            box-shadow: 0 6px 20px rgba(255, 8, 68, 0.6);
-            transform: scale(1.02);
-        }
-
-        .result-box {
-            margin-top: 25px;
-            padding: 20px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            text-align: center;
-            min-height: 100px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-
-        .result-value {
-            font-size: 32px;
-            font-weight: 700;
-            margin-top: 5px;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
-            transition: opacity 0.3s ease;
-        }
-
-        .text-blue { color: var(--primary-cyan); }
-        .text-green { color: var(--success-green); }
-        .text-red { color: var(--alert-red); }
-
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
 </head>
 <body>
 
@@ -251,11 +49,11 @@
                 </div>
             </div>
             
-            <button class="btn-blue" onclick="simularHVAC()">Calcular Potência Ideal</button>
+            <button class="btn-blue" onclick="executarInferenciaIA()">Calcular Predições (Full Pipeline)</button>
 
             <div class="result-box">
                 <span style="color: var(--text-muted); font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">Previsão do Regressor</span>
-                <div class="result-value text-blue" id="resultado-hvac">-- %</div>
+                <div class="result-value text-blue" id="resultado-hvac">-- kW</div>
             </div>
         </div>
 
@@ -271,16 +69,18 @@
                     <input type="number" id="manut-consumo" value="16.5" step="0.1">
                 </div>
                 <div class="input-group">
-                    <label>Resíduo (kW)</label>
-                    <input type="number" id="manut-residuo" value="1.2" step="0.1">
+                    <label>Resíduo Calculado (kW)</label>
+                    <input type="number" id="manut-residuo" value="0.0" step="0.1" readonly>
                 </div>
                 <div class="input-group">
                     <label>Média Móvel 15m (kW)</label>
-                    <input type="number" id="manut-media15m" value="1.8" step="0.1">
+                    <input type="number" id="manut-media15m" value="0.0" step="0.1" readonly>
                 </div>
             </div>
 
-            <button class="btn-red" onclick="simularFalha()">Analisar Anomalias</button>
+            <p style="text-align: center; font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">
+                *O diagnóstico é gerado automaticamente ao calcular a predição.
+            </p>
 
             <div class="result-box">
                 <span style="color: var(--text-muted); font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">Diagnóstico do Classificador</span>
@@ -291,49 +91,6 @@
 
     </div>
 
-    <script>
-        // Lógica Falsa (Mock) mantida para teste visual
-        function simularHVAC() {
-            const temp = parseFloat(document.getElementById('hvac-temp-ext').value);
-            const lotacao = parseInt(document.getElementById('hvac-lotacao').value);
-            
-            let potenciaSimulada = (temp * 1.5) + (lotacao * 0.4);
-            if (potenciaSimulada > 100) potenciaSimulada = 100;
-            if (potenciaSimulada < 0) potenciaSimulada = 0;
-
-            const boxResult = document.getElementById('resultado-hvac');
-            boxResult.style.opacity = 0;
-            
-            setTimeout(() => {
-                boxResult.innerText = potenciaSimulada.toFixed(1) + ' %';
-                boxResult.style.opacity = 1;
-            }, 200);
-        }
-
-        function simularFalha() {
-            const media15m = parseFloat(document.getElementById('manut-media15m').value);
-            
-            const boxResult = document.getElementById('resultado-manut');
-            const boxProb = document.getElementById('probabilidade-manut');
-
-            boxResult.style.opacity = 0;
-
-            setTimeout(() => {
-                if (media15m >= 1.5) {
-                    let prob = 70 + (media15m * 10); 
-                    if (prob > 99.9) prob = 99.9;
-
-                    boxResult.innerText = '⚠️ FALHA MECÂNICA';
-                    boxResult.className = 'result-value text-red';
-                    boxProb.innerText = `Probabilidade de Falha: ${prob.toFixed(1)}%`;
-                } else {
-                    boxResult.innerText = '✔️ SISTEMA SAUDÁVEL';
-                    boxResult.className = 'result-value text-green';
-                    boxProb.innerText = `Probabilidade de Falha: ${(media15m * 10).toFixed(1)}%`;
-                }
-                boxResult.style.opacity = 1;
-            }, 200);
-        }
-    </script>
+    <script src="{{ url_for('static', filename='js/simulador.js') }}"></script>
 </body>
 </html>
