@@ -45,9 +45,15 @@ async function atualizarStatus() {
         const response = await fetch('/api/status_atual');
         const data = await response.json();
 
-        // Atualizar KPIs Físicos
-        document.querySelector('.kpi-card:nth-child(1) span:nth-child(2)').innerText = data.lotacao + ' pass.';
-        document.querySelector('.kpi-card:nth-child(1) div:nth-child(2) span:nth-child(2)').innerText = data.temp_externa + '°C';
+        // Se o banco estiver vazio, não tenta atualizar para não dar erro
+        if (data.error) {
+            console.log("Aguardando dados do sensor...");
+            return;
+        }
+
+        // Atualizar KPIs Físicos usando IDs de forma segura
+        document.getElementById('valor-lotacao').innerText = data.lotacao + ' pass.';
+        document.getElementById('valor-temp').innerText = data.temp_externa + '°C';
         document.getElementById('consumo-real').innerText = data.consumo_real.toFixed(1) + ' kW';
 
         // Atualizar o Gráfico
@@ -62,7 +68,7 @@ async function atualizarStatus() {
         if (data.alerta_manutencao) {
             cardManutencao.classList.add('alert');
             badgeFalha.className = 'status-badge danger';
-            badgeFalha.innerText = '⚠️ ALERTA MECÂNICO (>80%)';
+            badgeFalha.innerText = '⚠️ ALERTA MECÂNICO (>25%)';
         } else {
             cardManutencao.classList.remove('alert');
             badgeFalha.className = 'status-badge success';
