@@ -3,6 +3,8 @@ import logging
 import pandas as pd
 import numpy as np
 import joblib
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from flask import Flask, render_template, request, jsonify
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -19,6 +21,19 @@ limiter = Limiter(
     default_limits=["500 per day", "100 per hour"],
     storage_uri="memory://"
 )
+
+# --- CONFIGURAÇÃO DE CONEXÃO COM O BANCO ---
+DB_CONFIG = {
+    'dbname': 'smartbus',
+    'user': 'postgres',
+    'password': 'admin',
+    'host': 'localhost',
+    'port': '5432'
+}
+
+def get_db_connection():
+    conn = psycopg2.connect(**DB_CONFIG)
+    return conn
 
 # --- CONFIGURAÇÃO DE CAMINHOS E CARREGAMENTO ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -68,6 +83,11 @@ def predict():
 
         # Preparar dados para o regressor
         input_df = pd.DataFrame([{
+            'dia_semana': 3, 
+            'hora': 14, 
+            'is_horario_pico': 0,
+            'temp_interna_atual': 25.0,
+            'velocidade_kmh': 40.0,
             'temp_externa': float(data['temp_externa']),
             'lotacao': int(data['lotacao']),
             'incidencia_solar': float(data['incidencia_solar']),
@@ -105,6 +125,59 @@ def predict():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+# --- NOVA API: INGESTÃO DE DADOS (IOT) ---
+@app.route('/api/telemetria/ingestao', methods=['POST'])
+def ingestao():
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({'error': 'Payload vazio'}), 400
+
+    # 1. Preparar dados para o modelo
+    input_df = pd.DataFrame([{
+            'dia_semana': 3,
+            'hora': 14,
+            'is_horario_pico': 0,
+            'temp_interna_atual': 25.0, 
+            'velocidade_kmh': 40.0,   
+            'temp_externa': float(data['temp_externa']),
+            'lotacao': int(data['lotacao']),
+            'incidencia_solar': float(data['incidencia_solar']),
+            'portas_abertas': int(data['portas_abertas'])
+        }])
+    
+    # 2. Fazer predição com os modelos carregados
+    potencia_esperada = model_reg.predict(input_df)[0]
+    residuo = float(data['potencia_real_kw']) - potencia_esperada
+    
+    input_clf = input_df.copy()
+    input_clf['residuo'] = residuo
+    input_clf['residuo_media_15m'] = residuo 
+    
+    prob_falha = model_clf.predict_proba(input_clf)[0][1]
+
+    # 3. Salvar no PostgreSQL (Dados crus + Predições)
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    query = """
+        INSERT INTO telemetria_onibus 
+        (id_onibus, temp_externa, lotacao, incidencia_solar, portas_abertas, potencia_real_kw, potencia_esperada_kw, probabilidade_falha)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+    """
+    valores = (
+        data['id_onibus'], data['temp_externa'], data['lotacao'], 
+        data['incidencia_solar'], data['portas_abertas'], data['potencia_real_kw'], 
+        float(potencia_esperada), float(prob_falha)
+    )
+    
+    cur.execute(query, valores)
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return jsonify({'status': 'success'}), 201
+
 # --- API: TELEMETRIA EM TEMPO REAL (DESMOCADA) ---
 @app.route('/api/status_atual')
 def status_atual():
@@ -121,6 +194,11 @@ def status_atual():
 
     # Cálculo do resíduo real baseado no modelo para o dashboard
     input_ia = pd.DataFrame([{
+        'dia_semana': row['dia_semana'],
+        'hora': row['hora'],
+        'is_horario_pico': row['is_horario_pico'],
+        'temp_interna_atual': row['temp_interna_atual'],
+        'velocidade_kmh': row['velocidade_kmh'],
         'temp_externa': row['temp_externa'],
         'lotacao': row['lotacao'],
         'incidencia_solar': row['incidencia_solar'],
