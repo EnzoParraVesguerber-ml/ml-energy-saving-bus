@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Bus - Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
+    <style>
+        /* Estilo extra para fazer os cards funcionarem como botões de link */
+        .card-link {
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+        .card-link:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        .card-link p {
+            margin: 15px 0;
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🚌 Portal Smart Bus</h1>
+        <p>Selecione o módulo que deseja acessar para monitoramento e simulação de eficiência energética.</p>
+    </header>
+
+    <div class="grid-container">
+        
+        <a href="/status" class="card hvac card-link">
+            <h2>📡 Monitoramento Real</h2>
+            <p>Acompanhe a telemetria dos sensores IOT e as decisões da IA segundo a segundo.</p>
+            <div class="btn-blue" style="width: auto; padding: 10px 20px;">Acessar Painel</div>
+        </a>
+
+        <a href="/simulador" class="card hvac card-link">
+            <h2>🧪 Playground da IA</h2>
+            <p>Módulo de testes manuais. Insira variáveis extremas e assista aos modelos inferindo resultados.</p>
+            <div class="btn-blue" style="width: auto; padding: 10px 20px;">Acessar Simulador</div>
+        </a>
+
+        <a href="/economia" class="card maintenance card-link">
+            <h2>💰 Relatório de Economia</h2>
+            <p>Visualize os KPIs de energia economizada, redução de custos e impacto ambiental (CO2).</p>
+            <div class="btn-blue" style="width: auto; padding: 10px 20px; background-color: #2e7d32;">Ver KPIs</div>
+        </a>
+
+    </div>
+
+</body>
+</html>

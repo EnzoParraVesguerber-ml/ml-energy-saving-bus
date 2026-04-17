@@ -62,7 +62,11 @@ carregar_recursos()
 # --- ROTAS DE PÁGINAS (FRONTEND) ---
 @app.route('/')
 def index():
-    return render_template('status.html')
+    return render_template('index.html') # Nova página inicial
+
+@app.route('/status')
+def status():
+    return render_template('status.html') # Antiga página principal
 
 @app.route('/simulador')
 def simulador():
@@ -81,23 +85,22 @@ def predict():
         if not data:
             return jsonify({'status': 'error', 'message': 'Payload vazio.'}), 400
 
-        # Preparar dados para o regressor
+        # 1. Regressor: Exatamente 9 features, na ordem do fit
         input_df = pd.DataFrame([{
-            'dia_semana': 3, 
             'hora': 14, 
+            'dia_semana': 3, 
             'is_horario_pico': 0,
-            'temp_interna_atual': 25.0,
-            'velocidade_kmh': 40.0,
             'temp_externa': float(data['temp_externa']),
-            'lotacao': int(data['lotacao']),
             'incidencia_solar': float(data['incidencia_solar']),
-            'portas_abertas': int(data['portas_abertas'])
+            'lotacao': int(data['lotacao']),
+            'portas_abertas': int(data['portas_abertas']),
+            'velocidade_kmh': 40.0,
+            'temp_interna_atual': 25.0
         }])
         
-        # 1. Predição da Potência Esperada (Regressão)
         potencia_esperada = model_reg.predict(input_df)[0]
         
-        # 2. Cálculo de Resíduos para a Manutenção
+        # 2. Cálculos temporais
         potencia_real = float(data['potencia_real_kw'])
         residuo_atual = potencia_real - potencia_esperada
         
@@ -106,10 +109,13 @@ def predict():
         if len(historico) > 15: historico = historico[-15:]
         residuo_media = np.mean(historico)
         
-        # 3. Diagnóstico de Falha (Classificação)
-        input_clf = input_df.copy()
-        input_clf['residuo'] = residuo_atual
-        input_clf['residuo_media_15m'] = residuo_media
+        # 3. Classificador: Exatamente 4 features, na ordem do fit e com os nomes corretos
+        input_clf = pd.DataFrame([{
+            'potencia_hvac_target': potencia_esperada,
+            'consumo_kw': potencia_real,
+            'residuo_consumo': residuo_atual,
+            'residuo_media_15m': residuo_media
+        }])
         
         prob_falha = model_clf.predict_proba(input_clf)[0][1]
         
@@ -129,37 +135,39 @@ def predict():
 @app.route('/api/telemetria/ingestao', methods=['POST'])
 def ingestao():
     data = request.get_json()
-    
     if not data:
         return jsonify({'error': 'Payload vazio'}), 400
 
-    # 1. Preparar dados para o modelo
+    # 1. Regressor: Exatamente 9 features
     input_df = pd.DataFrame([{
-            'dia_semana': 3,
-            'hora': 14,
-            'is_horario_pico': 0,
-            'temp_interna_atual': 25.0, 
-            'velocidade_kmh': 40.0,   
-            'temp_externa': float(data['temp_externa']),
-            'lotacao': int(data['lotacao']),
-            'incidencia_solar': float(data['incidencia_solar']),
-            'portas_abertas': int(data['portas_abertas'])
-        }])
+        'hora': 14,
+        'dia_semana': 3,
+        'is_horario_pico': 0,
+        'temp_externa': float(data['temp_externa']),
+        'incidencia_solar': float(data['incidencia_solar']),
+        'lotacao': int(data['lotacao']),
+        'portas_abertas': int(data['portas_abertas']),
+        'velocidade_kmh': 40.0,   
+        'temp_interna_atual': 25.0 
+    }])
     
-    # 2. Fazer predição com os modelos carregados
     potencia_esperada = model_reg.predict(input_df)[0]
-    residuo = float(data['potencia_real_kw']) - potencia_esperada
+    potencia_real = float(data['potencia_real_kw'])
+    residuo = potencia_real - potencia_esperada
     
-    input_clf = input_df.copy()
-    input_clf['residuo'] = residuo
-    input_clf['residuo_media_15m'] = residuo 
+    # 2. Classificador: Exatamente 4 features
+    input_clf = pd.DataFrame([{
+        'potencia_hvac_target': potencia_esperada,
+        'consumo_kw': potencia_real,
+        'residuo_consumo': residuo,
+        'residuo_media_15m': residuo # Simplificado na ingestão inicial
+    }])
     
     prob_falha = model_clf.predict_proba(input_clf)[0][1]
 
-    # 3. Salvar no PostgreSQL (Dados crus + Predições)
+    # 3. Salvar no PostgreSQL
     conn = get_db_connection()
     cur = conn.cursor()
-    
     query = """
         INSERT INTO telemetria_onibus 
         (id_onibus, temp_externa, lotacao, incidencia_solar, portas_abertas, potencia_real_kw, potencia_esperada_kw, probabilidade_falha)
@@ -167,7 +175,7 @@ def ingestao():
     """
     valores = (
         data['id_onibus'], data['temp_externa'], data['lotacao'], 
-        data['incidencia_solar'], data['portas_abertas'], data['potencia_real_kw'], 
+        data['incidencia_solar'], data['portas_abertas'], potencia_real, 
         float(potencia_esperada), float(prob_falha)
     )
     
@@ -186,33 +194,31 @@ def status_atual():
     if df_telemetria is None:
         return jsonify({'error': 'Dataset não disponível'}), 500
 
-    # Lê a linha atual do dataset para simular o "stream" de dados
     row = df_telemetria.iloc[index_simulacao]
-    
-    # Incrementa o índice para a próxima chamada (circular)
     index_simulacao = (index_simulacao + 1) % len(df_telemetria)
 
-    # Cálculo do resíduo real baseado no modelo para o dashboard
+    # 1. Regressor: Exatamente 9 features
     input_ia = pd.DataFrame([{
-        'dia_semana': row['dia_semana'],
         'hora': row['hora'],
+        'dia_semana': row['dia_semana'],
         'is_horario_pico': row['is_horario_pico'],
-        'temp_interna_atual': row['temp_interna_atual'],
-        'velocidade_kmh': row['velocidade_kmh'],
         'temp_externa': row['temp_externa'],
-        'lotacao': row['lotacao'],
         'incidencia_solar': row['incidencia_solar'],
-        'portas_abertas': row['portas_abertas']
+        'lotacao': row['lotacao'],
+        'portas_abertas': row['portas_abertas'],
+        'velocidade_kmh': row['velocidade_kmh'],
+        'temp_interna_atual': row['temp_interna_atual']
     }])
+    
     potencia_esperada = model_reg.predict(input_ia)[0]
-    residuo = row['potencia_real_kw'] - potencia_esperada
+    residuo = row['consumo_kw'] - potencia_esperada # Usando consumo_kw direto do csv
 
     return jsonify({
         'lotacao': int(row['lotacao']),
         'temp_externa': round(float(row['temp_externa']), 1),
-        'consumo_real': round(float(row['potencia_real_kw']), 2),
+        'consumo_real': round(float(row['consumo_kw']), 2),
         'residuo': round(float(residuo), 2),
-        'alerta_manutencao': bool(residuo > 1.5) # Threshold de negócio
+        'alerta_manutencao': bool(residuo > 1.5) 
     })
 
 # --- API: DASHBOARD DE ECONOMIA (DADOS AGREGADOS) ---
@@ -223,7 +229,7 @@ def kpis_economia():
 
     # 1. Agregação dos KPIs Superiores
     # Calculamos o total consumido no CSV vs o que gastaria com ar condicionado no máximo (ex: 22 kW fixos)
-    total_real = df_telemetria['potencia_real_kw'].sum()
+    total_real = df_telemetria['consumo_kw'].sum() # <-- CORRIGIDO AQUI
     total_sem_ia = len(df_telemetria) * 22.0  
     
     kwh_poupado = total_sem_ia - total_real
@@ -232,9 +238,9 @@ def kpis_economia():
 
     # 2. Distribuição de Uso da Potência (Gráfico de Rosca)
     # Filtramos as categorias diretamente do dataframe original
-    desligado = len(df_telemetria[df_telemetria['potencia_real_kw'] <= 2.0])
-    frio_leve = len(df_telemetria[(df_telemetria['potencia_real_kw'] > 2.0) & (df_telemetria['potencia_real_kw'] <= 15.0)])
-    potencia_alta = len(df_telemetria[df_telemetria['potencia_real_kw'] > 15.0])
+    desligado = len(df_telemetria[df_telemetria['consumo_kw'] <= 2.0]) # <-- CORRIGIDO AQUI
+    frio_leve = len(df_telemetria[(df_telemetria['consumo_kw'] > 2.0) & (df_telemetria['consumo_kw'] <= 15.0)]) # <-- CORRIGIDO AQUI
+    potencia_alta = len(df_telemetria[df_telemetria['consumo_kw'] > 15.0]) # <-- CORRIGIDO AQUI
 
     # 3. Gráfico Semanal (Barras)
     # Como a granularidade é de 1 minuto, cada dia tem 1440 minutos.
@@ -247,7 +253,7 @@ def kpis_economia():
         bloco_dia = df_telemetria.iloc[inicio:fim]
         
         # Calcula a economia desse dia específico
-        poupado_dia = (len(bloco_dia) * 22.0) - bloco_dia['potencia_real_kw'].sum()
+        poupado_dia = (len(bloco_dia) * 22.0) - bloco_dia['consumo_kw'].sum() # <-- CORRIGIDO AQUI
         ultimos_7_dias_kwh.append(round(poupado_dia, 1))
 
     return jsonify({
