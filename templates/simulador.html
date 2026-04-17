@@ -3,95 +3,129 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Bus - Playground da IA</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
-    
+    <title>Smart Bus - Simulador de IA</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Ajustes finos para o formulário do simulador */
+        .form-grid {
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 20px; 
+            margin-top: 20px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .form-group label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+        }
+        .form-group input, .form-group select {
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: white;
+            font-family: 'Poppins', sans-serif;
+        }
+        .full-width {
+            grid-column: 1 / -1;
+        }
+    </style>
 </head>
-<body>
+<body class="fade-in">
 
     <header>
         <h1>🧪 Playground da IA</h1>
-        <p>Módulo de testes manuais. Insira variáveis extremas e assista aos modelos de Machine Learning inferindo resultados em tempo real.</p>
+        <p>Ajuste as variáveis de contexto para testar as predições de Eficiência e Manutenção.</p>
     </header>
-    <a href="/" style="color: var(--text-muted); text-decoration: none; margin-bottom: 20px; display: inline-block;">
-        &larr; Voltar ao Portal Principal
-    </a>
 
-    <div class="grid-container">
-        
-        <div class="card hvac">
-            <h2>❄️ IA Otimizadora (HVAC)</h2>
-            <div class="form-grid">
-                <div class="input-group">
-                    <label>Temp. Externa (°C)</label>
-                    <input type="number" id="hvac-temp-ext" value="32.5" step="0.1">
-                </div>
-                <div class="input-group">
-                    <label>Lotação (Passageiros)</label>
-                    <input type="number" id="hvac-lotacao" value="65">
-                </div>
-                <div class="input-group">
-                    <label>Incidência Solar (0-10)</label>
-                    <input type="number" id="hvac-solar" value="8">
-                </div>
-                <div class="input-group">
-                    <label>Velocidade (km/h)</label>
-                    <input type="number" id="hvac-vel" value="45">
-                </div>
-                <div class="input-group">
-                    <label>Portas Abertas?</label>
-                    <select id="hvac-portas">
-                        <option value="0">Não (0)</option>
-                        <option value="1">Sim (1)</option>
-                    </select>
-                </div>
-                <div class="input-group">
-                    <label>Temp. Interna Atual (°C)</label>
-                    <input type="number" id="hvac-temp-int" value="26.0" step="0.1">
-                </div>
+    <div style="padding: 0 5%;">
+        <a href="/" style="color: var(--text-muted); text-decoration: none; margin-bottom: 20px; display: inline-block;">
+            &larr; Voltar ao Portal Principal
+        </a>
+
+        <div class="grid-container">
+            <div class="card hvac full-width">
+                <h3>Configurações do Cenário</h3>
+                <form id="form-simulador">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Hora do Dia (0-23)</label>
+                            <input type="number" id="hora" value="14" min="0" max="23">
+                        </div>
+                        <div class="form-group">
+                            <label>Dia da Semana (0-6)</label>
+                            <input type="number" id="dia_semana" value="2" min="0" max="6">
+                        </div>
+                        <div class="form-group">
+                            <label>Horário de Pico?</label>
+                            <select id="is_horario_pico">
+                                <option value="0">Não</option>
+                                <option value="1">Sim</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Temp. Externa (°C)</label>
+                            <input type="number" id="temp_externa" value="32" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label>Incidência Solar (0-100%)</label>
+                            <input type="number" id="incidencia_solar" value="85">
+                        </div>
+                        <div class="form-group">
+                            <label>Lotação (Passageiros)</label>
+                            <input type="number" id="lotacao" value="50">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Portas Abertas?</label>
+                            <select id="portas_abertas">
+                                <option value="0">Fechadas</option>
+                                <option value="1">Abertas</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Velocidade (km/h)</label>
+                            <input type="number" id="velocidade_kmh" value="40">
+                        </div>
+                        <div class="form-group">
+                            <label>Temp. Interna Atual (°C)</label>
+                            <input type="number" id="temp_interna_atual" value="26" step="0.1">
+                        </div>
+
+                        <div class="form-group full-width" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+                            <label><strong>Consumo Real Medido pelo Sensor (kW)</strong></label>
+                            <input type="number" id="potencia_real_kw" value="14.5" step="0.1">
+                            <small style="color: var(--text-muted); margin-top: 5px;">
+                                Aumente este valor manualmente para simular anomalias e testar o alerta de manutenção.
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn-blue" style="margin-top: 25px; width: 100%;">
+                        Executar Inferência nos Modelos
+                    </button>
+                </form>
             </div>
-            
-            <button class="btn-blue" onclick="executarInferenciaIA()">Calcular Predições (Full Pipeline)</button>
 
-            <div class="result-box">
-                <span style="color: var(--text-muted); font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">Previsão do Regressor</span>
-                <div class="result-value text-blue" id="resultado-hvac">-- kW</div>
+            <div class="card hvac">
+                <h3>Potência Ideal (Regressor)</h3>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">O que o sistema deveria consumir:</p>
+                <div class="value highlight" id="result-potencia">-- kW</div>
+            </div>
+
+            <div class="card maintenance" id="card-manutencao">
+                <h3>Análise de Saúde (Classificador)</h3>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Probabilidade de Falha Mecânica:</p>
+                <div class="value" id="result-falha">--%</div>
+                <div id="status-text" style="margin-top: 10px; font-weight: bold;">Aguardando dados...</div>
             </div>
         </div>
-
-        <div class="card maintenance">
-            <h2>🔧 Manutenção Preditiva</h2>
-            <div class="form-grid">
-                <div class="input-group">
-                    <label>Potência Alvo (%)</label>
-                    <input type="number" id="manut-potencia" value="85.0">
-                </div>
-                <div class="input-group">
-                    <label>Consumo Real (kW)</label>
-                    <input type="number" id="manut-consumo" value="16.5" step="0.1">
-                </div>
-                <div class="input-group">
-                    <label>Resíduo Calculado (kW)</label>
-                    <input type="number" id="manut-residuo" value="0.0" step="0.1" readonly>
-                </div>
-                <div class="input-group">
-                    <label>Média Móvel 15m (kW)</label>
-                    <input type="number" id="manut-media15m" value="0.0" step="0.1" readonly>
-                </div>
-            </div>
-
-            <p style="text-align: center; font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">
-                *O diagnóstico é gerado automaticamente ao calcular a predição.
-            </p>
-
-            <div class="result-box">
-                <span style="color: var(--text-muted); font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">Diagnóstico do Classificador</span>
-                <div class="result-value" id="resultado-manut" style="font-size: 24px;">--</div>
-                <div style="font-size: 14px; margin-top: 8px; color: var(--text-muted); font-weight: 300;" id="probabilidade-manut">Probabilidade de Falha: --%</div>
-            </div>
-        </div>
-
     </div>
 
     <script src="{{ url_for('static', filename='js/simulador.js') }}"></script>

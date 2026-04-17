@@ -378,3 +378,35 @@ button {
     position: relative;
     width: 100%;
 }
+
+/* =========================================================
+   CORREÇÃO DE IMERSÃO: CONTROLES NATIVOS DO NAVEGADOR
+   ========================================================= */
+
+/* 1. Avisa ao navegador para usar as versões escuras dos controles */
+input, select {
+    color-scheme: dark;
+}
+
+/* 2. Estilo para as caixas de seleção (Dropdown / Horário de Pico) */
+select option {
+    background-color: #1a1c23; /* Fundo escuro combinando com seus cards */
+    color: #ffffff;            /* Texto claro */
+    font-family: 'Poppins', sans-serif;
+    padding: 10px;
+}
+
+/* 3. Estilo para os botões de aumentar/diminuir números (Spinners) */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    opacity: 0.8; /* Deixa eles levemente transparentes */
+    cursor: pointer;
+    /* Substitui o fundo branco brilhante por um fundo escuro translúcido */
+    background-color: rgba(255, 255, 255, 0.05); 
+}
+
+/* Dá um brilho sutil com a cor do seu tema (ciano) ao passar o mouse nas setinhas */
+input[type="number"]:hover::-webkit-inner-spin-button {
+    background-color: rgba(0, 242, 254, 0.2); 
+    opacity: 1;
+}

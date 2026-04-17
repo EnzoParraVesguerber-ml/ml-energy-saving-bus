@@ -1,68 +1,76 @@
-// Variável para manter o estado no Frontend (Stateless Backend)
-let historicoResiduos = [];
+// Aguarda que o documento carregue para garantir que os elementos existem
+document.addEventListener('DOMContentLoaded', () => {
+    
+    const formSimulador = document.getElementById('form-simulador');
 
-async function executarInferenciaIA() {
-    // 1. Recolher os valores digitados pelo utilizador e incluir o histórico
-    const payload = {
-        temp_externa: parseFloat(document.getElementById('hvac-temp-ext').value),
-        lotacao: parseInt(document.getElementById('hvac-lotacao').value),
-        incidencia_solar: parseFloat(document.getElementById('hvac-solar').value),
-        portas_abertas: parseInt(document.getElementById('hvac-portas').value),
-        potencia_real_kw: parseFloat(document.getElementById('manut-consumo').value),
-        historico_residuos: historicoResiduos // Adicionada a chave exigida pela nova API
-    };
+    formSimulador.addEventListener('submit', async (e) => {
+        // Impede que a página recarregue ao submeter o formulário
+        e.preventDefault();
 
-    try {
-        // 2. Fazer o pedido POST para o servidor Flask
-        const response = await fetch('/api/predict', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-        });
+        // 1. Capturar todos os dados inseridos pelo utilizador
+        const payload = {
+            hora: document.getElementById('hora').value,
+            dia_semana: document.getElementById('dia_semana').value,
+            is_horario_pico: document.getElementById('is_horario_pico').value,
+            temp_externa: document.getElementById('temp_externa').value,
+            incidencia_solar: document.getElementById('incidencia_solar').value,
+            lotacao: document.getElementById('lotacao').value,
+            portas_abertas: document.getElementById('portas_abertas').value,
+            velocidade_kmh: document.getElementById('velocidade_kmh').value,
+            temp_interna_atual: document.getElementById('temp_interna_atual').value,
+            potencia_real_kw: document.getElementById('potencia_real_kw').value
+        };
 
-        const data = await response.json();
+        // Alterar o texto do botão para dar feedback visual enquanto a IA processa
+        const btnSubmit = formSimulador.querySelector('button[type="submit"]');
+        const textoOriginal = btnSubmit.innerText;
+        btnSubmit.innerText = 'A processar...';
+        btnSubmit.disabled = true;
 
-        if (data.status === 'success') {
-            // Atualizar o histórico local com o retorno da API para a próxima chamada
-            historicoResiduos = data.novo_historico_residuos;
+        try {
+            // 2. Enviar os dados para o Backend (Flask)
+            const response = await fetch('/api/predict', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify(payload)
+            });
 
-            // 3. Atualizar o Card 1 (IA Otimizadora)
-            const boxHvac = document.getElementById('resultado-hvac');
-            boxHvac.style.opacity = 0;
-            setTimeout(() => {
-                boxHvac.innerText = data.potencia_esperada.toFixed(2) + ' kW';
-                boxHvac.style.opacity = 1;
-            }, 200);
+            const result = await response.json();
 
-            // 4. Preencher os inputs de Resíduo e Média Móvel (agora lendo 'residuo_atual')
-            document.getElementById('manut-residuo').value = data.residuo_atual.toFixed(2);
-            document.getElementById('manut-media15m').value = data.residuo_media.toFixed(2);
+            // 3. Atualizar a Interface (UI) com a resposta da IA
+            if (result.status === 'success') {
+                
+                // Atualiza os valores numéricos dos resultados
+                document.getElementById('result-potencia').innerText = result.potencia_esperada.toFixed(2) + ' kW';
+                document.getElementById('result-falha').innerText = result.probabilidade_falha.toFixed(1) + '%';
 
-            // 5. Atualizar o Card 2 (Manutenção Preditiva)
-            const boxResultManut = document.getElementById('resultado-manut');
-            const boxProb = document.getElementById('probabilidade-manut');
-            
-            boxResultManut.style.opacity = 0;
-            setTimeout(() => {
-                if (data.alerta_manutencao) {
-                    boxResultManut.innerText = '⚠️ FALHA MECÂNICA';
-                    boxResultManut.className = 'result-value text-red';
+                // Lógica de alerta visual para o card de Manutenção
+                const cardManutencao = document.getElementById('card-manutencao');
+                const statusText = document.getElementById('status-text');
+
+                // Se a probabilidade for superior ao limite de segurança (25%)
+                if (result.alerta_manutencao) {
+                    cardManutencao.classList.add('alert');
+                    statusText.innerText = '⚠️ NECESSITA MANUTENÇÃO';
+                    statusText.style.color = '#ff4b2b'; // Vermelho de alerta
                 } else {
-                    boxResultManut.innerText = '✔️ SISTEMA SAUDÁVEL';
-                    boxResultManut.className = 'result-value text-green';
+                    cardManutencao.classList.remove('alert');
+                    statusText.innerText = '✔️ OPERAÇÃO NORMAL';
+                    statusText.style.color = '#00f2fe'; // Azul/Verde de sucesso
                 }
-                boxProb.innerText = `Probabilidade de Falha: ${data.probabilidade_falha.toFixed(1)}%`;
-                boxResultManut.style.opacity = 1;
-            }, 200);
+            } else {
+                alert("Erro da API: " + result.message);
+            }
 
-        } else {
-            alert('Erro na API: ' + data.message);
+        } catch (error) {
+            console.error("Erro na inferência da IA:", error);
+            alert("Erro ao conectar com a IA. Verifica se o backend (app.py) está a correr.");
+        } finally {
+            // Restaurar o botão ao estado normal após terminar
+            btnSubmit.innerText = textoOriginal;
+            btnSubmit.disabled = false;
         }
-
-    } catch (error) {
-        console.error('Erro de ligação:', error);
-        alert('Erro ao ligar ao servidor Flask. Verifique o console.');
-    }
-}
+    });
+});
