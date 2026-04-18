@@ -234,56 +234,76 @@ def status_atual():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# --- API: DASHBOARD DE ECONOMIA (DADOS AGREGADOS) ---
+# --- API: DASHBOARD DE ECONOMIA (REVISADO: 00h às 20h) ---
 @app.route('/api/kpis_economia')
 def kpis_economia():
     if df_telemetria is None:
         return jsonify({'error': 'Dataset não carregado'}), 500
 
-    # 1. Agregação dos KPIs Superiores
-    # Calculamos o total consumido no CSV vs o que gastaria com ar condicionado no máximo (ex: 22 kW fixos)
-    total_real = df_telemetria['consumo_kw'].sum() # <-- CORRIGIDO AQUI
-    total_sem_ia = len(df_telemetria) * 22.0  
+    # 1. Definindo as premissas de negócio (O cenário justo)
+    HORA_INICIO = 0   # Meia-noite
+    HORA_FIM = 20     # 20h da noite
+    POTENCIA_MAXIMA_EQUIPAMENTO = 18.0 # kW
+    BASELINE_USO_PADRAO = 0.80 # 80% de uso constante (sem IA)
+    TARIFA_KWH = 0.85 # R$ por kWh
     
-    kwh_poupado = total_sem_ia - total_real
-    economia_reais = kwh_poupado * 0.85 # Valor estimado da tarifa
-    co2_evitado = kwh_poupado * 0.09 # Fator de emissão (kg CO2 / kWh)
+    # 2. Filtrando o Dataset para o novo horário operacional (00h às 20h)
+    df_operacional = df_telemetria[
+        (df_telemetria['hora'] >= HORA_INICIO) & 
+        (df_telemetria['hora'] <= HORA_FIM)
+    ].copy()
 
-    # 2. Distribuição de Uso da Potência (Gráfico de Rosca)
-    # Filtramos as categorias diretamente do dataframe original
-    desligado = len(df_telemetria[df_telemetria['consumo_kw'] <= 2.0]) # <-- CORRIGIDO AQUI
-    frio_leve = len(df_telemetria[(df_telemetria['consumo_kw'] > 2.0) & (df_telemetria['consumo_kw'] <= 15.0)]) # <-- CORRIGIDO AQUI
-    potencia_alta = len(df_telemetria[df_telemetria['consumo_kw'] > 15.0]) # <-- CORRIGIDO AQUI
+    # 3. Cálculo de Energia (Dividindo por 60 para converter minutos em horas)
+    total_real_kwh = df_operacional['consumo_kw'].sum() / 60.0
+    total_sem_ia_kwh = (len(df_operacional) * (POTENCIA_MAXIMA_EQUIPAMENTO * BASELINE_USO_PADRAO)) / 60.0
+    
+    kwh_poupado = total_sem_ia_kwh - total_real_kwh
+    economia_reais = kwh_poupado * TARIFA_KWH
+    co2_evitado = kwh_poupado * 0.09
 
-    # 3. Gráfico Semanal (Barras)
-    # Como a granularidade é de 1 minuto, cada dia tem 1440 minutos.
-    # Vamos fatiar as últimas 7 "fatias de 1440 linhas" para simular a última semana operada.
+    # 4. Gráfico Diário: Perfil Médio de Consumo por Hora
+    perfil_diario = df_operacional.groupby('hora')['consumo_kw'].mean().reset_index()
+    
+    labels_diario = [f"{int(h):02d}:00" for h in perfil_diario['hora']]
+    com_ia_diario = [round(val, 2) for val in perfil_diario['consumo_kw']]
+    sem_ia_diario = [POTENCIA_MAXIMA_EQUIPAMENTO * BASELINE_USO_PADRAO] * len(labels_diario)
+
+    # 5. Gráfico Semanal
+    # Das 00h até as 20h (inclusas) são 21 horas de operação por dia = 1260 minutos
+    minutos_por_dia = 1260
     ultimos_7_dias_kwh = []
+    labels_semanal = []
+
     for i in range(7, 0, -1):
-        # Seleciona o bloco de 1 dia
-        inicio = -(i * 1440)
-        fim = -((i - 1) * 1440) if i > 1 else None
-        bloco_dia = df_telemetria.iloc[inicio:fim]
+        inicio = -(i * minutos_por_dia)
+        fim = -((i - 1) * minutos_por_dia) if i > 1 else None
+        bloco_dia = df_operacional.iloc[inicio:fim]
         
-        # Calcula a economia desse dia específico
-        poupado_dia = (len(bloco_dia) * 22.0) - bloco_dia['consumo_kw'].sum() # <-- CORRIGIDO AQUI
-        ultimos_7_dias_kwh.append(round(poupado_dia, 1))
+        # Economia do dia em kWh
+        base_dia = (len(bloco_dia) * (POTENCIA_MAXIMA_EQUIPAMENTO * BASELINE_USO_PADRAO)) / 60.0
+        real_dia = bloco_dia['consumo_kw'].sum() / 60.0
+        
+        ultimos_7_dias_kwh.append(round(base_dia - real_dia, 1))
+        labels_semanal.append(f"Dia -{i}")
 
     return jsonify({
         'kpi_kwh': round(kwh_poupado, 1),
         'kpi_money': round(economia_reais, 2),
         'kpi_co2': round(co2_evitado, 2),
-        
-        # Gráfico de Linha (Comparativo) - Pode manter uma amostra ou agrupar por hora real
         'chart_diario': {
-            'labels': ['06:00', '09:00', '12:00', '15:00', '18:00', '21:00'],
-            'sem_ia': [22, 22, 22, 22, 22, 22],
-            'com_ia': [14, 18, 24, 25, 20, 16] # Exemplificado. Ideal: df.groupby() de uma coluna de hora
+            'labels': labels_diario,
+            'sem_ia': sem_ia_diario,
+            'com_ia': com_ia_diario
         },
-        
-        # Injeta os arrays reais calculados pelo Pandas
-        'chart_semanal': ultimos_7_dias_kwh,
-        'chart_distribuicao': [desligado, frio_leve, potencia_alta]
+        'chart_semanal': {
+            'labels': labels_semanal,
+            'data': ultimos_7_dias_kwh
+        },
+        'chart_distribuicao': [
+            len(df_operacional[df_operacional['consumo_kw'] <= 2.0]),
+            len(df_operacional[(df_operacional['consumo_kw'] > 2.0) & (df_operacional['consumo_kw'] <= 12.0)]),
+            len(df_operacional[df_operacional['consumo_kw'] > 12.0])
+        ]
     })
 
 if __name__ == '__main__':

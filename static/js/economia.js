@@ -49,15 +49,15 @@ async function carregarDashboardEconomia() {
             }
         });
 
-        // 3. Renderizar Gráfico de Barras (Semanal)
+        // 3. Renderizar Gráfico de Barras (Semanal) Dinâmico
         const ctxBar = document.getElementById('barChart').getContext('2d');
         new Chart(ctxBar, {
             type: 'bar',
             data: {
-                labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
+                labels: data.chart_semanal.labels, // Lendo os dias dinâmicos da API
                 datasets: [{
                     label: 'kWh Poupados',
-                    data: data.chart_semanal,
+                    data: data.chart_semanal.data, // Lendo os valores dinâmicos da API
                     backgroundColor: '#4facfe',
                     borderRadius: 5
                 }]
