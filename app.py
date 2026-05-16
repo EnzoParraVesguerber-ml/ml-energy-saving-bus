@@ -245,7 +245,11 @@ def kpis_economia():
     HORA_FIM = 20     # 20h da noite
     POTENCIA_MAXIMA_EQUIPAMENTO = 18.0 # kW
     BASELINE_USO_PADRAO = 0.80 # 80% de uso constante (sem IA)
-    TARIFA_KWH = 0.85 # R$ por kWh
+    
+    # NOVAS PREMISSAS - BASEADAS EM DIESEL (Motor a combustão)
+    TAXA_LITROS_POR_KWH = 0.31       # Litros de diesel consumidos por kWh gerado
+    PRECO_DIESEL = 7.33              # R$ por litro de diesel (conforme solicitado)
+    FATOR_EMISSAO_CO2_DIESEL = 2.68  # kg de CO2 por litro de diesel queimado
     
     # 2. Filtrando o Dataset para o novo horário operacional (00h às 20h)
     df_operacional = df_telemetria[
@@ -257,9 +261,13 @@ def kpis_economia():
     total_real_kwh = df_operacional['consumo_kw'].sum() / 60.0
     total_sem_ia_kwh = (len(df_operacional) * (POTENCIA_MAXIMA_EQUIPAMENTO * BASELINE_USO_PADRAO)) / 60.0
     
+    # Energia economizada pelo modelo
     kwh_poupado = total_sem_ia_kwh - total_real_kwh
-    economia_reais = kwh_poupado * TARIFA_KWH
-    co2_evitado = kwh_poupado * 0.09
+    
+    # NOVOS CÁLCULOS: Conversão de kWh para Diesel
+    litros_poupados = kwh_poupado * TAXA_LITROS_POR_KWH
+    economia_reais = litros_poupados * PRECO_DIESEL
+    co2_evitado = litros_poupados * FATOR_EMISSAO_CO2_DIESEL
 
     # 4. Gráfico Diário: Perfil Médio de Consumo por Hora
     perfil_diario = df_operacional.groupby('hora')['consumo_kw'].mean().reset_index()
