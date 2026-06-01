@@ -91,5 +91,5 @@ Para garantir que o dashboard de economia seja realista, o sistema aplica as seg
 
 ---
 
-**Autores:** Enzo Parra, Gustavo Yuji, Bruno Torres
+**Autores:** Enzo Parra, Gustavo Yuji, Bruno Torres, Lucas Moraes
 **Instituição:** Facens - Engenharia de Computação (3º Semestre)
